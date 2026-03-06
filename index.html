@@ -32,11 +32,25 @@
             '<span style="color:#2ecc71">✅ ' + decodedText + '</span>';
 
           // إرسال النتيجة لتطبيق Apps Script
-          window.opener && window.opener.postMessage(
-            { type: 'QR_RESULT', value: decodedText }, '*'
-          );
+window.opener && window.opener.postMessage(
+  { type: 'QR_RESULT', value: decodedText }, '*'
+);
 
-          setTimeout(function() { window.close(); }, 1000);
+// عرض رسالة نجاح ثم إغلاق تلقائي
+document.getElementById('status').innerHTML =
+  '<span style="color:#2ecc71">✅ تم! جاري الإغلاق...</span>';
+document.getElementById('close-btn').style.display = 'none';
+
+// محاولة الإغلاق التلقائي
+setTimeout(function() {
+  window.close();
+  // إذا لم يُغلق (بعض متصفحات الهاتف)، أظهر زر الإغلاق اليدوي
+  setTimeout(function() {
+    document.getElementById('close-btn').style.display = 'block';
+    document.getElementById('close-btn').innerText = '✅ تم - اضغط للإغلاق';
+    document.getElementById('close-btn').style.background = '#2ecc71';
+  }, 1000);
+}, 800);
         });
       }
     ).then(function() {
