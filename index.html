@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { margin:0; background:#1a1a2e; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Tajawal',sans-serif; }
+    #reader { width:300px; border-radius:15px; overflow:hidden; }
+    #status { color:white; margin-top:20px; font-size:16px; font-weight:bold; text-align:center; padding:0 20px; min-height:30px; }
+    #close-btn { margin-top:25px; padding:12px 35px; border-radius:20px; background:#C98C3C; color:white; border:none; cursor:pointer; font-size:16px; }
+  </style>
+</head>
+<body>
+  <div style="color:white; font-size:20px; margin-bottom:20px;">📷 امسح رمز QR</div>
+  <div id="reader"></div>
+  <div id="status">جاري تهيئة الكاميرا...</div>
+  <button id="close-btn" onclick="closeScanner()">إغلاق</button>
+
+  <script>
+    // استقبال العنوان الأصلي من التطبيق
+    const params   = new URLSearchParams(window.location.search);
+    const origin   = params.get('origin') || '*';
+    const scanner  = new Html5Qrcode("reader");
+
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 20, qrbox: { width: 250, height: 250 } },
+      function(decodedText) {
+        scanner.stop().then(function() {
+          document.getElementById('status').innerHTML =
+            '<span style="color:#2ecc71">✅ ' + decodedText + '</span>';
+
+          // إرسال النتيجة لتطبيق Apps Script
+          window.opener && window.opener.postMessage(
+            { type: 'QR_RESULT', value: decodedText }, '*'
+          );
+
+          setTimeout(function() { window.close(); }, 1000);
+        });
+      }
+    ).then(function() {
+      document.getElementById('status').innerText = "وجّه الكاميرا نحو رمز QR";
+    }).catch(function(err) {
+      document.getElementById('status').innerHTML =
+        '<span style="color:#e74c3c">❌ يرجى السماح بالكاميرا من إعدادات المتصفح</span>';
+    });
+
+    function closeScanner() {
+      scanner.stop().catch(function(){}).finally(function() { window.close(); });
+    }
+  </script>
+</body>
+</html>
