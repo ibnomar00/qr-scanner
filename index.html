@@ -2,69 +2,237 @@
 <html dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { margin:0; background:#1a1a2e; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Tajawal',sans-serif; }
-    #reader { width:300px; border-radius:15px; overflow:hidden; }
-    #status { color:white; margin-top:20px; font-size:16px; font-weight:bold; text-align:center; padding:0 20px; min-height:30px; }
-    #close-btn { margin-top:25px; padding:12px 35px; border-radius:20px; background:#C98C3C; color:white; border:none; cursor:pointer; font-size:16px; }
+    * { box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      background: #1a1a2e; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      min-height: 100vh; 
+      font-family: 'Tajawal', sans-serif; 
+      padding: 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    #reader {
+      width: 100%;
+      max-width: 350px;
+      margin: 0 auto;
+      border-radius: 15px;
+      overflow: hidden;
+      background: #000;
+    }
+    #reader video {
+      width: 100%;
+      height: auto;
+    }
+    #status {
+      color: white;
+      margin-top: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      padding: 0 10px;
+      min-height: 50px;
+      line-height: 1.6;
+    }
+    .btn {
+      margin-top: 15px;
+      padding: 12px 35px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      font-family: 'Tajawal', sans-serif;
+      transition: 0.3s;
+    }
+    .btn-close {
+      background: #C98C3C;
+      color: white;
+    }
+    .btn-close:hover {
+      background: #b07a2e;
+      transform: scale(1.03);
+    }
+    .btn-retry {
+      background: #2ecc71;
+      color: white;
+      display: none;
+    }
+    .btn-retry:hover {
+      background: #27ae60;
+      transform: scale(1.03);
+    }
+    .btn-retry.show {
+      display: inline-block;
+    }
+    .info {
+      font-size: 12px;
+      color: #999;
+      margin-top: 15px;
+    }
+    .error-text {
+      color: #ff6b6b;
+    }
+    .success-text {
+      color: #2ecc71;
+    }
+    .loading-text {
+      color: #f1c40f;
+    }
   </style>
 </head>
 <body>
-  <div style="color:white; font-size:20px; margin-bottom:20px;">📷 امسح رمز QR</div>
-  <div id="reader"></div>
-  <div id="status">جاري تهيئة الكاميرا...</div>
-  <button id="close-btn" onclick="closeScanner()">إغلاق</button>
+  <div class="container">
+    <div style="color:white; font-size:20px; margin-bottom:15px;">📷 امسح رمز QR</div>
+    
+    <div id="reader"></div>
+    
+    <div id="status">⏳ جاري تهيئة الكاميرا...</div>
+    
+    <!-- ✅ زر إعادة المحاولة -->
+    <button id="retry-btn" class="btn btn-retry" onclick="startScanner()">
+      🔄 إعادة المحاولة
+    </button>
+    
+    <button id="close-btn" class="btn btn-close" onclick="closeScanner()">
+      ✕ إغلاق
+    </button>
+    
+    <div class="info">📌 تأكد من إضاءة جيدة ووضوح الرمز</div>
+  </div>
 
   <script>
-    // استقبال العنوان الأصلي من التطبيق
-    const params   = new URLSearchParams(window.location.search);
-    const origin   = params.get('origin') || '*';
-    const scanner  = new Html5Qrcode("reader");
+    // ============================================================
+    // صفحة مسح QR - نسخة محسّنة للهواتف مع إعادة المحاولة
+    // ============================================================
+    
+    let scanner = null;
+    let isScanning = false;
+    const statusEl = document.getElementById('status');
+    const retryBtn = document.getElementById('retry-btn');
+    const closeBtn = document.getElementById('close-btn');
 
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 20, qrbox: { width: 250, height: 250 } },
-      function(decodedText) {
-        scanner.stop().then(function() {
-          document.getElementById('status').innerHTML =
-            '<span style="color:#2ecc71">✅ ' + decodedText + '</span>';
-
-          // إرسال النتيجة لتطبيق Apps Script
-window.opener && window.opener.postMessage(
-  { type: 'QR_RESULT', value: decodedText }, '*'
-);
-
-// عرض رسالة نجاح ثم إغلاق تلقائي
-document.getElementById('status').innerHTML =
-  '<span style="color:#2ecc71">✅ تم! جاري الإغلاق...</span>';
-document.getElementById('close-btn').style.display = 'none';
-
-// محاولة الإغلاق التلقائي
-setTimeout(function() {
-  window.close();
-  // إذا لم يُغلق (بعض متصفحات الهاتف)، أظهر زر الإغلاق اليدوي
-  setTimeout(function() {
-    document.getElementById('close-btn').style.display = 'block';
-    document.getElementById('close-btn').innerText = '✅ تم - اضغط للإغلاق';
-    document.getElementById('close-btn').style.background = '#2ecc71';
-  }, 1000);
-}, 800);
-        });
+    // ============================================================
+    // تشغيل الكاميرا
+    // ============================================================
+    function startScanner() {
+      // منع التشغيل المتكرر
+      if (isScanning) return;
+      
+      // إخفاء زر إعادة المحاولة
+      retryBtn.classList.remove('show');
+      
+      // تحديث الحالة
+      statusEl.innerHTML = '⏳ <span class="loading-text">جاري تشغيل الكاميرا...</span>';
+      
+      // إنشاء كائن المسح
+      if (!scanner) {
+        scanner = new Html5Qrcode("reader");
       }
-    ).then(function() {
-      document.getElementById('status').innerText = "وجّه الكاميرا نحو رمز QR";
-    }).catch(function(err) {
-      document.getElementById('status').innerHTML =
-        '<span style="color:#e74c3c">❌ يرجى السماح بالكاميرا من إعدادات المتصفح</span>';
+
+      const config = {
+        fps: 15,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
+
+      isScanning = true;
+
+      scanner.start(
+        { facingMode: "environment" },
+        config,
+        // ✅ عند نجاح المسح
+        function(decodedText) {
+          statusEl.innerHTML = '✅ <span class="success-text">تم مسح الرمز بنجاح!</span>';
+          
+          // إيقاف الكاميرا
+          if (scanner) {
+            scanner.stop().catch(function() {});
+            scanner = null;
+          }
+          isScanning = false;
+
+          // إرسال النتيجة إلى النافذة الأصلية
+          if (window.opener) {
+            window.opener.postMessage({ type: 'QR_RESULT', value: decodedText }, '*');
+          }
+
+          // إغلاق النافذة بعد 1.5 ثانية
+          setTimeout(function() {
+            window.close();
+          }, 1500);
+        },
+        // ⏳ تحديث حالة البحث
+        function(errorMessage) {
+          statusEl.innerHTML = '⏳ <span class="loading-text">جاري البحث عن رمز QR...</span>';
+        }
+      ).catch(function(err) {
+        // ❌ فشل تشغيل الكاميرا
+        console.error('خطأ في الكاميرا:', err);
+        
+        statusEl.innerHTML = `
+          ❌ <span class="error-text">لا يمكن الوصول للكاميرا.</span><br>
+          <span style="font-size:14px;opacity:0.7;">يرجى السماح بالكاميرا من إعدادات المتصفح</span>
+        `;
+        
+        // ✅ إظهار زر إعادة المحاولة
+        retryBtn.classList.add('show');
+        
+        isScanning = false;
+        scanner = null;
+      });
+    }
+
+    // ============================================================
+    // إغلاق الصفحة
+    // ============================================================
+    function closeScanner() {
+      if (scanner) {
+        scanner.stop().catch(function() {});
+        scanner = null;
+      }
+      isScanning = false;
+      window.close();
+    }
+
+    // ============================================================
+    // تشغيل الكاميرا تلقائياً عند تحميل الصفحة
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+      // تأخير بسيط لضمان تحميل المكتبة
+      setTimeout(startScanner, 500);
     });
 
-    function closeScanner() {
-      scanner.stop().catch(function(){}).finally(function() { window.close(); });
-    }
+    // ============================================================
+    // إيقاف الكاميرا عند إغلاق النافذة
+    // ============================================================
+    window.addEventListener('beforeunload', function() {
+      if (scanner) {
+        scanner.stop().catch(function() {});
+        scanner = null;
+      }
+    });
+
+    // ============================================================
+    // التعامل مع تغيير حالة التركيز (للهواتف)
+    // ============================================================
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden && scanner) {
+        // توقف عن المسح عندما تكون الصفحة في الخلفية
+        scanner.stop().catch(function() {});
+        scanner = null;
+        isScanning = false;
+      }
+    });
   </script>
-  <div id="status">جاري تهيئة الكاميرا...</div>
-<button id="retry-btn" style="display:none;" onclick="startScanner()">إعادة المحاولة</button>
 </body>
 </html>
