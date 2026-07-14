@@ -64,5 +64,7 @@ setTimeout(function() {
       scanner.stop().catch(function(){}).finally(function() { window.close(); });
     }
   </script>
+  <div id="status">جاري تهيئة الكاميرا...</div>
+<button id="retry-btn" style="display:none;" onclick="startScanner()">إعادة المحاولة</button>
 </body>
 </html>
